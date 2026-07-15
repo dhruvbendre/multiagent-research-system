@@ -20,7 +20,7 @@ from agents import build_reader_agent, build_search_agent, writer_chain, critic_
 # --------------------------------------------------------------------------
 st.set_page_config(
     page_title="Research Desk",
-    page_icon="\U0001F4C1",
+    page_icon="📁",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -37,6 +37,7 @@ CSS = """
 :root {
     --ink: #ffffff;          /* White text */
     --paper: #000000;        /* Pure black background */
+    --black: #000000;        /* Fixed undefined variable */
     --card: #121212;         /* Very dark gray for card surfaces */
     --yellow: #fbca1f;
     --moss: #4a7c59;
@@ -169,20 +170,27 @@ p, li, span, label, div { color: var(--ink) !important; }
     box-shadow: 0.18em 0.18em 0 var(--ink) !important;
 }
 
-st.markdown(
-    "<p style='margin-top:-0.6rem; margin-bottom:1.4rem; font-family:\"Space Grotesk\", sans-serif; "
-    "font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:#aaa; font-size:0.9rem;'>"
-    "Search agent finds sources &rarr; Reader agent scrapes the best one "
-    "&rarr; Writer drafts the report &rarr; Critic scores it.</p>",
-    unsafe_allow_html=True,
-)
+div[data-testid="stButton"] > button,
+div[data-testid="stFormSubmitButton"] > button {
+    background: var(--card) !important;
+    color: var(--ink) !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 700 !important;
+    border: var(--border-w) solid var(--ink) !important;
+    border-radius: 0.4em !important;
+    box-shadow: 0.1em 0.1em 0 var(--ink) !important;
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
 div[data-testid="stButton"] > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover {
     transform: translate(-0.05em, -0.05em);
     box-shadow: 0.15em 0.15em 0 var(--ink) !important;
     background: var(--yellow) !important;
     border: var(--border-w) solid var(--ink) !important;
+    color: #000000 !important;
 }
+
 div[data-testid="stButton"] > button:active,
 div[data-testid="stFormSubmitButton"] > button:active {
     transform: translate(0.05em, 0.05em);
@@ -299,7 +307,7 @@ with input_col:
     )
 with button_col:
     run_clicked = st.button(
-        "Run \U0001F50D",
+        "Run 🔎",
         use_container_width=True,
         disabled=st.session_state.running,
     )
@@ -441,7 +449,7 @@ else:
     if st.session_state.report:
         st.markdown("<div style='height:0.4rem;'></div>", unsafe_allow_html=True)
         st.download_button(
-            "Download report \U0001F4C4",
+            "Download report 📄",
             data=st.session_state.report,
             file_name=f"{st.session_state.topic_run.replace(' ', '_')[:40] or 'report'}.md",
             mime="text/markdown",
