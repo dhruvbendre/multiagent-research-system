@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Relay — Research Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0E14;
+    --surface: #12161F;
+    --surface-raised: #171C27;
+    --surface-hover: #1B212E;
+    --line: #232A38;
+    --line-bright: #313B4F;
+    --ink: #E4E8F1;
+    --ink-dim: #7C879C;
+    --ink-faint: #4B5568;
+    --signal: #5EEAD4;
+    --signal-soft: rgba(94, 234, 212, 0.12);
+    --signal-dim: #1B4B47;
+    --amber: #F0B45C;
+    --amber-soft: rgba(240, 180, 92, 0.12);
+    --danger: #E8664F;
+    --danger-soft: rgba(232, 102, 79, 0.12);
+    --radius: 10px;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ color-scheme: dark; }
+  body{
+    margin:0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 800px 500px at 15% -10%, rgba(94,234,212,0.05), transparent),
+      radial-gradient(ellipse 600px 400px at 100% 10%, rgba(240,180,92,0.035), transparent);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+
+  a{ color: var(--signal); }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(11,14,20,0.85);
+    backdrop-filter: blur(10px);
+    position: sticky; top:0; z-index: 20;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:30px; height:30px; border-radius:7px;
+    background: linear-gradient(135deg, var(--signal), #2DD4BF);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 0 20px rgba(94,234,212,0.35);
+  }
+  .brand-mark svg{ width:16px; height:16px; }
+  .brand-name{
+    font-family: var(--mono); font-weight: 700; font-size: 15px;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink);
+  }
+  .brand-sub{
+    font-family: var(--mono); font-size: 11px; color: var(--ink-dim);
+    letter-spacing: 0.03em; margin-top: 2px;
+  }
+  .brand-text{ display:flex; flex-direction:column; }
+  .clock{
+    font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+    letter-spacing: 0.05em; display:flex; align-items:center; gap:8px;
+  }
+  .clock-dot{
+    width:6px; height:6px; border-radius:50%; background: var(--signal);
+    box-shadow: 0 0 8px var(--signal);
+  }
+  .clock-dot.idle{ background: var(--ink-faint); box-shadow:none; animation:none; }
+  .clock-dot.active{ animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* ---------- Layout ---------- */
+  .shell{
+    max-width: 1360px; margin: 0 auto;
+    padding: 32px 28px 80px;
+    display:grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 980px){
+    .shell{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Left rail: control + relay ---------- */
+  .rail{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    position: sticky; top: 88px;
+  }
+  @media (max-width: 980px){ .rail{ position: static; } }
+
+  .field-label{
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-dim); margin-bottom: 8px; display:block;
+  }
+  .topic-input{
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line-bright);
+    border-radius: 8px;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 64px;
+    line-height: 1.5;
+  }
+  .topic-input:focus{
+    outline: none; border-color: var(--signal);
+    box-shadow: 0 0 0 3px var(--signal-soft);
+  }
+  .topic-input::placeholder{ color: var(--ink-faint); }
+
+  .run-btn{
+    width: 100%; margin-top: 12px;
+    background: var(--signal);
+    color: #06201C;
+    border: none; border-radius: 8px;
+    font-family: var(--mono); font-weight: 700; font-size: 13px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 12px 16px; cursor: pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition: filter 0.15s ease, transform 0.1s ease;
+  }
+  .run-btn:hover:not(:disabled){ filter: brightness(1.08); }
+  .run-btn:active:not(:disabled){ transform: scale(0.98); }
+  .run-btn:disabled{ background: var(--surface-hover); color: var(--ink-faint); cursor: not-allowed; }
+  .run-btn:focus-visible{ outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  .rail-hint{
+    font-size: 12px; color: var(--ink-faint); margin-top: 10px; line-height: 1.5;
+  }
+
+  .divider{
+    border: none; border-top: 1px solid var(--line);
+    margin: 22px 0;
+  }
+
+  /* ---------- Relay stations ---------- */
+  .relay{ position: relative; }
+  .station{
+    position: relative;
+    display: flex; gap: 14px;
+    padding: 12px 0;
+  }
+  .station-trace{
+    position: relative;
+    display:flex; flex-direction:column; align-items:center;
+    width: 22px; flex-shrink:0;
+  }
+  .station-node{
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--surface-raised);
+    border: 2px solid var(--line-bright);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; z-index:2;
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .station-node svg{ width:11px; height:11px; opacity:0; transition: opacity 0.2s ease; }
+  .station-node.done{ border-color: var(--signal); background: var(--signal-dim); }
+  .station-node.done svg{ opacity:1; stroke: var(--signal); }
+  .station-node.active{
+    border-color: var(--signal);
+    animation: node-glow 1.2s ease-in-out infinite;
+  }
+  .station-node.error{ border-color: var(--danger); background: var(--danger-soft); }
+  @keyframes node-glow{
+    0%,100%{ box-shadow: 0 0 0 0 rgba(94,234,212,0.4); }
+    50%{ box-shadow: 0 0 0 6px rgba(94,234,212,0); }
+  }
+  .station-line{
+    width: 2px; flex: 1;
+    background: var(--line-bright);
+    min-height: 34px;
+    margin-top: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .station-line::after{
+    content:''; position:absolute; left:0; top:0; width:100%; height:0%;
+    background: var(--signal);
+    transition: height 0.6s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 0 8px var(--signal);
+  }
+  .station-line.filled::after{ height: 100%; }
+  .station:last-child .station-line{ display:none; }
+
+  .station-body{ flex:1; padding-top: 1px; cursor: pointer; }
+  .station-name{
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    color: var(--ink-faint); letter-spacing: 0.02em;
+    transition: color 0.3s ease;
+  }
+  .station.is-selectable .station-name:hover{ color: var(--ink); }
+  .station-node.done ~ .station-body .station-name,
+  .station-node.active ~ .station-body .station-name{ color: var(--ink); }
+  .station-status{
+    font-size: 12px; color: var(--ink-faint); margin-top: 3px;
+    font-family: var(--mono);
+  }
+  .station-status.live{ color: var(--signal); }
+  .station-status.err{ color: var(--danger); }
+  .station-time{
+    font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+    margin-top: 4px;
+  }
+
+  /* ---------- Right pane ---------- */
+  .pane{ display:flex; flex-direction:column; gap: 20px; min-width: 0; }
+
+  .empty-state{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 64px 40px;
+    text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap: 14px;
+  }
+  .empty-glyph{
+    width:48px; height:48px; opacity:0.5;
+  }
+  .empty-title{
+    font-family: var(--mono); font-size: 15px; color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+  .empty-sub{ font-size: 13px; color: var(--ink-faint); max-width: 380px; line-height:1.6; }
+
+  /* ---------- Scrollback (live stage output) ---------- */
+  .scrollback{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .scrollback-head{
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-raised);
+  }
+  .scrollback-tabs{ display:flex; gap: 4px; }
+  .tab{
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;
+    color: var(--ink-faint); background: transparent; border: none;
+    padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .tab:hover{ background: var(--surface-hover); color: var(--ink-dim); }
+  .tab.active-tab{ background: var(--signal-soft); color: var(--signal); }
+  .tab:disabled{ opacity: 0.3; cursor: not-allowed; }
+  .tab:disabled:hover{ background: transparent; color: var(--ink-faint); }
+  .scrollback-elapsed{ font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+
+  .scrollback-body{
+    padding: 18px 20px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--ink-dim);
+    max-height: 340px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .scrollback-body::-webkit-scrollbar{ width: 8px; }
+  .scrollback-body::-webkit-scrollbar-thumb{ background: var(--line-bright); border-radius: 4px; }
+  .scrollback-body a{ color: var(--signal); text-decoration: underline; text-decoration-color: var(--signal-dim); }
+
+  .cursor-blink{
+    display:inline-block; width:7px; height:14px; background: var(--signal);
+    margin-left: 2px; vertical-align: -2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink{ 0%,49%{opacity:1;} 50%,100%{opacity:0;} }
+
+  /* ---------- Report ---------- */
+  .report-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow:hidden;
+  }
+  .report-head{
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap: wrap;
+  }
+  .report-eyebrow{
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px;
+  }
+  .report-title{ font-size: 18px; font-weight: 700; color: var(--ink); }
+  .report-body{
+    padding: 24px;
+    font-size: 15px; line-height: 1.75; color: var(--ink);
+  }
+  .report-body h1, .report-body h2, .report-body h3{
+    font-family: var(--sans); color: var(--ink); margin: 1.4em 0 0.5em;
+    line-height: 1.3;
+  }
+  .report-body h1{ font-size: 20px; }
+  .report-body h2{ font-size: 17px; }
+  .report-body h3{ font-size: 15px; color: var(--ink-dim); }
+  .report-body p{ margin: 0 0 1em; color: var(--ink-dim); }
+  .report-body ul, .report-body ol{ color: var(--ink-dim); padding-left: 1.3em; margin: 0 0 1em; }
+  .report-body li{ margin-bottom: 0.4em; }
+  .report-body strong{ color: var(--ink); }
+  .report-body code{
+    font-family: var(--mono); background: var(--surface-raised);
+    padding: 2px 6px; border-radius: 4px; font-size: 0.88em; color: var(--signal);
+  }
+
+  /* ---------- Verdict stamp ---------- */
+  .verdict{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    display:grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
+  }
+  @media (max-width: 640px){ .verdict{ grid-template-columns: 1fr; } }
+  .verdict-score{
+    font-family: var(--mono); font-weight: 700; font-size: 34px;
+    color: var(--amber); text-align:center; line-height: 1;
+    border: 2px solid var(--amber-soft); border-radius: 50%;
+    width: 88px; height: 88px; display:flex; align-items:center; justify-content:center;
+    background: var(--amber-soft); flex-shrink:0;
+  }
+  .verdict-score .of{ font-size: 15px; opacity: 0.6; }
+  .verdict-content{ min-width:0; }
+  .verdict-eyebrow{
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px;
+  }
+  .verdict-text{ font-size: 14px; color: var(--ink-dim); line-height: 1.6; white-space: pre-wrap; }
+  .verdict-text strong{ color: var(--ink); }
+
+  /* ---------- Error banner ---------- */
+  .error-banner{
+    background: var(--danger-soft);
+    border: 1px solid rgba(232,102,79,0.35);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display:flex; gap: 12px; align-items:flex-start;
+    font-size: 13px; color: #FFD9D0; line-height:1.6;
+  }
+  .error-banner svg{ flex-shrink:0; margin-top:2px; width:16px; height:16px; }
+  .error-banner code{ font-family: var(--mono); font-size: 12px; opacity: 0.85; }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#06201C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12h4l2-7 4 14 2-7h4"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Relay</span>
+        <span class="brand-sub">multi-agent research pipeline</span>
+      </div>
+    </div>
+    <div class="clock">
+      <span class="clock-dot idle" id="clockDot"></span>
+      <span id="clockText">IDLE</span>
+    </div>
+  </header>
+
+  <div class="shell">
+
+    <!-- LEFT: control + relay -->
+    <aside class="rail">
+      <label class="field-label" for="topicInput">Research topic</label>
+      <textarea
+        id="topicInput"
+        class="topic-input"
+        placeholder="e.g. the current state of solid-state batteries"
+        rows="3"
+      ></textarea>
+      <button class="run-btn" id="runBtn">
+        <svg id="runIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 3l14 9-14 9V3z"/>
+        </svg>
+        <span id="runLabel">Send through relay</span>
+      </button>
+      <div class="rail-hint">Runs the search → read → draft → critique chain end to end. Takes 30–90s depending on source length.</div>
+
+      <hr class="divider" />
+
+      <div class="relay" id="relay">
+        <!-- Station 1 -->
+        <div class="station is-selectable" data-stage="search">
+          <div class="station-trace">
+            <div class="station-node" id="node-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div class="station-line" id="line-search"></div>
+          </div>
+          <div class="station-body">
+            <div class="station-name">01 · Search</div>
+            <div class="station-status" id="status-search">Awaiting topic</div>
+            <div class="station-time" id="time-search"></div>
+          </div>
+        </div>
+        <!-- Station 2 -->
+        <div class="station is-selectable" data-stage="read">
+          <div class="station-trace">
+            <div class="station-node" id="node-read">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div class="station-line" id="line-read"></div>
+          </div>
+          <div class="station-body">
+            <div class="station-name">02 · Read</div>
+            <div class="station-status" id="status-read">Standing by</div>
+            <div class="station-time" id="time-read"></div>
+          </div>
+        </div>
+        <!-- Station 3 -->
+        <div class="station is-selectable" data-stage="write">
+          <div class="station-trace">
+            <div class="station-node" id="node-write">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div class="station-line" id="line-write"></div>
+          </div>
+          <div class="station-body">
+            <div class="station-name">03 · Draft</div>
+            <div class="station-status" id="status-write">Standing by</div>
+            <div class="station-time" id="time-write"></div>
+          </div>
+        </div>
+        <!-- Station 4 -->
+        <div class="station is-selectable" data-stage="critique">
+          <div class="station-trace">
+            <div class="station-node" id="node-critique">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+          </div>
+          <div class="station-body">
+            <div class="station-name">04 · Critique</div>
+            <div class="station-status" id="status-critique">Standing by</div>
+            <div class="station-time" id="time-critique"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: live pane -->
+    <main class="pane">
+
+      <div class="empty-state" id="emptyState">
+        <svg class="empty-glyph" viewBox="0 0 24 24" fill="none" stroke="#7C879C" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12h4l2-7 4 14 2-7h4"/>
+        </svg>
+        <div class="empty-title">No signal yet</div>
+        <div class="empty-sub">Enter a topic on the left and send it through the relay. Each station's raw output will appear here as it completes, ending with a drafted report and a scored critique.</div>
+      </div>
+
+      <div class="error-banner" id="errorBanner" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#E8664F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+        <div>
+          <strong id="errorTitle">A station dropped the signal.</strong>
+          <div id="errorDetail" style="margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="scrollback" id="scrollback" style="display:none;">
+        <div class="scrollback-head">
+          <div class="scrollback-tabs" id="scrollbackTabs">
+            <button class="tab" data-tab="search" disabled>Search</button>
+            <button class="tab" data-tab="read" disabled>Read</button>
+            <button class="tab" data-tab="write" disabled>Draft</button>
+            <button class="tab" data-tab="critique" disabled>Critique</button>
+          </div>
+          <div class="scrollback-elapsed" id="scrollbackElapsed"></div>
+        </div>
+        <div class="scrollback-body" id="scrollbackBody"></div>
+      </div>
+
+      <div class="report-card" id="reportCard" style="display:none;">
+        <div class="report-head">
+          <div>
+            <div class="report-eyebrow">Drafted report</div>
+            <div class="report-title" id="reportTopicTitle">—</div>
+          </div>
+        </div>
+        <div class="report-body" id="reportBody"></div>
+      </div>
+
+      <div class="verdict" id="verdictCard" style="display:none;">
+        <div class="verdict-score" id="verdictScore">–<span class="of">/10</span></div>
+        <div class="verdict-content">
+          <div class="verdict-eyebrow">Critic's review</div>
+          <div class="verdict-text" id="verdictText"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <span class="visually-hidden" id="liveRegion" aria-live="polite"></span>
+
+<script>
+(function(){
+  const STAGES = ['search','read','write','critique'];
+  const stageOutputs = { search:'', read:'', write:'', critique:'' };
+  const stageTimes = { search:null, read:null, write:null, critique:null };
+  let activeTab = null;
+  let es = null;
+
+  const el = (id) => document.getElementById(id);
+  const runBtn = el('runBtn');
+  const runLabel = el('runLabel');
+  const topicInput = el('topicInput');
+  const clockDot = el('clockDot');
+  const clockText = el('clockText');
+  const emptyState = el('emptyState');
+  const scrollback = el('scrollback');
+  const scrollbackBody = el('scrollbackBody');
+  const scrollbackElapsed = el('scrollbackElapsed');
+  const errorBanner = el('errorBanner');
+  const errorDetail = el('errorDetail');
+  const reportCard = el('reportCard');
+  const reportBody = el('reportBody');
+  const reportTopicTitle = el('reportTopicTitle');
+  const verdictCard = el('verdictCard');
+  const verdictScore = el('verdictScore');
+  const verdictText = el('verdictText');
+  const liveRegion = el('liveRegion');
+
+  function setClock(state){
+    if(state === 'active'){
+      clockDot.className = 'clock-dot active';
+      clockText.textContent = 'RELAY ACTIVE';
+    } else if(state === 'error'){
+      clockDot.className = 'clock-dot';
+      clockDot.style.background = '#E8664F';
+      clockText.textContent = 'SIGNAL LOST';
+    } else if(state === 'done'){
+      clockDot.className = 'clock-dot';
+      clockDot.style.background = '#5EEAD4';
+      clockText.textContent = 'TRANSMISSION COMPLETE';
+    } else {
+      clockDot.className = 'clock-dot idle';
+      clockDot.style.background = '';
+      clockText.textContent = 'IDLE';
+    }
+  }
+
+  function resetStations(){
+    STAGES.forEach(s => {
+      const node = el('node-' + s);
+      const status = el('status-' + s);
+      const time = el('time-' + s);
+      const line = el('line-' + s);
+      node.className = 'station-node';
+      status.className = 'station-status';
+      status.textContent = 'Standing by';
+      time.textContent = '';
+      if(line) line.classList.remove('filled');
+      stageOutputs[s] = '';
+      stageTimes[s] = null;
+    });
+    el('status-search').textContent = 'Awaiting topic';
+    document.querySelectorAll('.tab').forEach(t => { t.disabled = true; t.classList.remove('active-tab'); });
+  }
+
+  function startStage(stage, label){
+    const node = el('node-' + stage);
+    const status = el('status-' + stage);
+    node.className = 'station-node active';
+    status.className = 'station-status live';
+    status.textContent = label + '…';
+    liveRegion.textContent = label;
+  }
+
+  function finishStage(stage, label, output, elapsedSec){
+    const node = el('node-' + stage);
+    const status = el('status-' + stage);
+    const time = el('time-' + stage);
+    const line = el('line-' + stage);
+    node.className = 'station-node done';
+    status.className = 'station-status';
+    status.textContent = label;
+    time.textContent = 't+' + elapsedSec + 's';
+    if(line) line.classList.add('filled');
+
+    stageOutputs[stage] = output || '(no output returned)';
+    stageTimes[stage] = elapsedSec;
+
+    const tab = document.querySelector('.tab[data-tab="' + stage + '"]');
+    if(tab) tab.disabled = false;
+
+    // auto-advance the visible tab to the freshest stage
+    selectTab(stage);
+  }
+
+  function errorStage(stage, message){
+    const node = el('node-' + stage);
+    const status = el('status-' + stage);
+    if(node) node.className = 'station-node error';
+    if(status){ status.className = 'station-status err'; status.textContent = 'Dropped signal'; }
+  }
+
+  function selectTab(stage){
+    activeTab = stage;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active-tab', t.dataset.tab === stage);
+    });
+    scrollbackBody.textContent = stageOutputs[stage] || '';
+    if(stageTimes[stage] != null){
+      scrollbackElapsed.textContent = 't+' + stageTimes[stage] + 's';
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      if(!tab.disabled) selectTab(tab.dataset.tab);
+    });
+  });
+
+  // Clicking a station in the rail also jumps the scrollback to it, once available
+  document.querySelectorAll('.station.is-selectable').forEach(st => {
+    st.addEventListener('click', () => {
+      const stage = st.dataset.stage;
+      if(stageOutputs[stage]) selectTab(stage);
+    });
+  });
+
+  function renderReportMarkdown(md){
+    // Lightweight markdown -> HTML for the writer chain's output.
+    // Handles headings, bold, bullet lists, numbered lists, and paragraphs.
+    const lines = md.split(/\r?\n/);
+    let html = '';
+    let inUl = false, inOl = false;
+
+    function closeLists(){
+      if(inUl){ html += '</ul>'; inUl = false; }
+      if(inOl){ html += '</ol>'; inOl = false; }
+    }
+
+    for(let raw of lines){
+      const line = raw.trim();
+      if(line === ''){ closeLists(); continue; }
+
+      let m;
+      if((m = line.match(/^###\s+(.*)/))){ closeLists(); html += '<h3>' + inline(m[1]) + '</h3>'; continue; }
+      if((m = line.match(/^##\s+(.*)/))){ closeLists(); html += '<h2>' + inline(m[1]) + '</h2>'; continue; }
+      if((m = line.match(/^#\s+(.*)/))){ closeLists(); html += '<h1>' + inline(m[1]) + '</h1>'; continue; }
+
+      if((m = line.match(/^[-*]\s+(.*)/))){
+        if(!inUl){ closeLists(); html += '<ul>'; inUl = true; }
+        html += '<li>' + inline(m[1]) + '</li>';
+        continue;
+      }
+      if((m = line.match(/^\d+\.\s+(.*)/))){
+        if(!inOl){ closeLists(); html += '<ol>'; inOl = true; }
+        html += '<li>' + inline(m[1]) + '</li>';
+        continue;
+      }
+
+      closeLists();
+      html += '<p>' + inline(line) + '</p>';
+    }
+    closeLists();
+    return html;
+  }
+
+  function inline(text){
+    let t = escapeHtml(text);
+    t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+    t = t.replace(/(https?:\/\/[^\s)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    return t;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function parseVerdict(feedback){
+    const scoreMatch = feedback.match(/Score:\s*(\d+)\s*\/\s*10/i);
+    return {
+      score: scoreMatch ? scoreMatch[1] : '–',
+      text: feedback
+    };
+  }
+
+  function setRunning(isRunning){
+    runBtn.disabled = isRunning;
+    topicInput.disabled = isRunning;
+    runLabel.textContent = isRunning ? 'Relay in progress…' : 'Send through relay';
+  }
+
+  function run(){
+    const topic = topicInput.value.trim();
+    if(!topic) { topicInput.focus(); return; }
+
+    if(es){ es.close(); es = null; }
+
+    resetStations();
+    emptyState.style.display = 'none';
+    errorBanner.style.display = 'none';
+    reportCard.style.display = 'none';
+    verdictCard.style.display = 'none';
+    scrollback.style.display = 'block';
+    scrollbackBody.textContent = '';
+    scrollbackElapsed.textContent = '';
+    setRunning(true);
+    setClock('active');
+
+    const url = '/api/run?topic=' + encodeURIComponent(topic);
+    es = new EventSource(url);
+
+    es.addEventListener('stage_start', (e) => {
+      const data = JSON.parse(e.data);
+      startStage(data.stage, data.label);
+      if(data.stage === activeTab || activeTab === null){
+        scrollbackBody.textContent = data.label + '…';
+      }
+    });
+
+    es.addEventListener('stage_done', (e) => {
+      const data = JSON.parse(e.data);
+      finishStage(data.stage, data.label, data.output, data.elapsed);
+
+      if(data.stage === 'write'){
+        reportTopicTitle.textContent = topic;
+        reportBody.innerHTML = renderReportMarkdown(data.output);
+        reportCard.style.display = 'block';
+      }
+      if(data.stage === 'critique'){
+        const v = parseVerdict(data.output);
+        verdictScore.innerHTML = v.score + '<span class="of">/10</span>';
+        verdictText.innerHTML = inline(v.text).replace(/\n/g, '<br>');
+        verdictCard.style.display = 'block';
+      }
+    });
+
+    es.addEventListener('complete', (e) => {
+      setRunning(false);
+      setClock('done');
+      es.close(); es = null;
+    });
+
+    es.addEventListener('error', (e) => {
+      let msg = 'The connection to the relay was interrupted.';
+      try{
+        if(e.data){
+          const data = JSON.parse(e.data);
+          msg = data.message || msg;
+        }
+      }catch(_){}
+      errorDetail.textContent = msg;
+      errorBanner.style.display = 'flex';
+      setRunning(false);
+      setClock('error');
+      STAGES.forEach(s => {
+        const node = el('node-' + s);
+        if(node && node.classList.contains('active')) errorStage(s, msg);
+      });
+      if(es){ es.close(); es = null; }
+    });
+  }
+
+  runBtn.addEventListener('click', run);
+  topicInput.addEventListener('keydown', (e) => {
+    if((e.metaKey || e.ctrlKey) && e.key === 'Enter') run();
+  });
+
+})();
+</script>
+</body>
+</html>

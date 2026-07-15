@@ -1,0 +1,51 @@
+
+streamlit
+# ================================
+# Core LLM & Agent Framework
+# ================================
+langchain
+langchain-core
+langchain-community
+langchain-openai
+langchain-groq
+langgraph
+
+# ================================
+# groq
+# ================================
+groq
+
+# ================================
+# Web Search
+# ================================
+tavily-python
+langchain-tavily
+
+# ================================
+# Web Scraping
+# ================================
+beautifulsoup4
+requests
+lxml
+
+# ================================
+# Frontend
+# ================================
+streamlit
+
+# ================================
+# Environment Variables
+# ================================
+python-dotenv
+
+# ================================
+# Data Validation & Utilities
+# ================================
+pydantic
+typing-extensions
+
+# ================================
+# Async HTTP Support
+# ================================
+httpx
+aiohttp
